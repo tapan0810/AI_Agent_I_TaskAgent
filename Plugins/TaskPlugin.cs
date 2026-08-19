@@ -1,45 +1,89 @@
 using System.ComponentModel;
 using Microsoft.SemanticKernel;
+using TaskAgent.Services;
 
 namespace TaskAgent.Plugins;
 
 public class TaskPlugin
 {
-    private readonly List<string> _tasks = new();
+    private readonly TaskService _taskService;
 
-    // Add Task
+    public TaskPlugin(TaskService taskService)
+    {
+        _taskService = taskService;
+    }
+
     [KernelFunction]
     [Description("Adds a new task to the user's task list.")]
     public string AddTask(
-        [Description("The task that should be added.")]
-        string task)
+        [Description("The title or description of the task.")]
+        string title)
     {
-        _tasks.Add(task);
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            return "The task title cannot be empty.";
+        }
 
-        return $"Task added successfully: {task}";
+        var task = _taskService.AddTask(title);
+
+        return $"Task added successfully. ID: {task.Id}, Title: {task.Title}";
     }
 
-    // Get Tasks
     [KernelFunction]
-    [Description("Returns all tasks currently stored in the user's task list.")]
+    [Description("Returns all tasks in the user's task list.")]
     public string GetTasks()
     {
-        if (_tasks.Count == 0)
+        var tasks = _taskService.GetTasks();
+
+        if (tasks.Count == 0)
         {
-            return "There are no tasks.";
+            return "There are currently no tasks.";
         }
 
         return string.Join(
             Environment.NewLine,
-            _tasks.Select(
-                (task, index) => $"{index + 1}. {task}"
-            )
+            tasks.Select(task =>
+                $"ID: {task.Id} | " +
+                $"Title: {task.Title} | " +
+                $"Completed: {task.IsCompleted} | " +
+                $"Created: {task.CreatedAt:yyyy-MM-dd HH:mm:ss}")
         );
     }
 
-    // Get Current Time
     [KernelFunction]
-    [Description("Returns the current date and time.")]
+    [Description("Marks a task as completed using its task ID.")]
+    public string CompleteTask(
+        [Description("The ID of the task to complete.")]
+        int taskId)
+    {
+        var task = _taskService.CompleteTask(taskId);
+
+        if (task == null)
+        {
+            return $"Task with ID {taskId} was not found.";
+        }
+
+        return $"Task {taskId} marked as completed.";
+    }
+
+    [KernelFunction]
+    [Description("Deletes a task using its task ID.")]
+    public string DeleteTask(
+        [Description("The ID of the task to delete.")]
+        int taskId)
+    {
+        var deleted = _taskService.DeleteTask(taskId);
+
+        if (!deleted)
+        {
+            return $"Task with ID {taskId} was not found.";
+        }
+
+        return $"Task {taskId} deleted successfully.";
+    }
+
+    [KernelFunction]
+    [Description("Returns the current local date and time.")]
     public string GetCurrentTime()
     {
         return DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
