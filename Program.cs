@@ -13,7 +13,7 @@ Console.WriteLine();
 var builder = Kernel.CreateBuilder();
 
 builder.AddOllamaChatCompletion(
-    modelId: "gemma3",
+    modelId: "qwen3",
     endpoint: new Uri("http://localhost:11434")
 );
 
